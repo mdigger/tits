@@ -2,15 +2,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/mdigger/geolocate"
 )
 
-// Locator описывает сервис определения гео-координат на основании данных
-// сотовых вышек и Wi-Fi.
-type Locator struct {
+// LBS сервис определения координат по данным сотовых вышек и Wi-Fi.
+type LBS struct {
 	Type  string // название сервиса (Google, Mozilla, Yandex)
 	Token string // токен для пользования сервисом
 
@@ -23,36 +20,18 @@ type LBSResponse struct {
 	Accuracy float32 // точность вычисления (погрешность)
 }
 
-// GetLBS возвращает уточненные координаты по данным LBS, обращаясь к внешним
-// сервисам гео-локации.
-func (s *TrackInTouch) GetLBS(in geolocate.Request, out *LBSResponse) error {
-	if s.LBS == nil || s.LBS.Type == "" {
-		return errors.New("LBS service didn't initialized")
+// Get передает параметры с данными LBS на внешний сервер геолокации и
+// возвращает полученные от сервера данные.
+func (s *LBS) Get(req geolocate.Request, resp *LBSResponse) error {
+	if s.locator == nil {
+		return errors.New("LBS: service not initialized")
 	}
-	if s.LBS.locator == nil {
-		var serviceURL string
-		switch strings.ToLower(s.LBS.Type) {
-		case "mozilla":
-			serviceURL = geolocate.Mozilla
-		case "google":
-			serviceURL = geolocate.Google
-		case "yandex":
-			serviceURL = geolocate.Yandex
-		default:
-			return fmt.Errorf("unknown LBS service name: %s", s.LBS.Type)
-		}
-		var err error
-		s.LBS.locator, err = geolocate.New(serviceURL, s.LBS.Token)
-		if err != nil {
-			return err
-		}
-	}
-
-	resp, err := s.LBS.locator.Get(in)
+	// осуществляем запрос к внешнему сервису геолокации
+	respData, err := s.locator.Get(req)
 	if err != nil {
 		return err
 	}
-	out.Point = NewPoint(resp.Location.Lon, resp.Location.Lat)
-	out.Accuracy = resp.Accuracy
+	resp.Point = NewPoint(respData.Location.Lon, respData.Location.Lat)
+	resp.Accuracy = respData.Accuracy
 	return nil
 }

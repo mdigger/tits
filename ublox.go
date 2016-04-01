@@ -17,12 +17,14 @@ import (
 // настройки гео-трекинга для браслетов.
 type Ublox struct {
 	Token       string        // токен для авторизации на сервере
-	Pacc        uint32        // расстояние погрешности в метрах
 	Servers     []string      // список серверов
 	Timeout     time.Duration // время ожидания ответа
 	CacheTime   time.Duration // время кеширования ответа от сервисов
 	MaxDistance float32       // максимальная дистанция совпадения
-	client      *http.Client  // http-клиент для запроса
+	Pacc        uint32        // расстояние погрешности в метрах
+
+	client *http.Client    // http-клиент для запроса
+	coll   *mgo.Collection // соединение с MongoDB
 }
 
 // UbloxProfile описывает профиль возвращаемых данных для данного устройства.
@@ -41,105 +43,84 @@ type UbloxRequest struct {
 	Profile UbloxProfile // профиль устройства
 }
 
-// GetUblox возвращает данные для инициализации гео-локации браслетов.
-func (s *TrackInTouch) GetUblox(in UbloxRequest, out *[]byte) error {
-	if s.Ublox == nil {
-		return errors.New("u-blox service didn't initialized")
+// Get запрашивает и возвращает данные для инициализации геолокации браслета
+// с помощью сервиса U-Blox.
+func (u *Ublox) Get(req UbloxRequest, data *[]byte) error {
+	if u.client == nil || u.coll == nil {
+		return errors.New("UBLOX: service not initialized")
 	}
-
-	var (
-		session *mgo.Session
-		coll    *mgo.Collection
-	)
-	if s.session != nil {
-		session = s.session.Copy()
-		defer session.Close()
-		coll = session.DB(s.dbname).C("ublox")
-		search := bson.M{
-			"profile": in.Profile,
-			"point": bson.D{ // важен порядок следования элементов запроса или может быть ошибка!
-				{"$nearSphere", in.Point},
-				{"$maxDistance", s.Ublox.MaxDistance},
-			}}
-		var cacheData struct{ Data []byte }
-		err := coll.Find(search).Select(bson.M{"data": 1, "_id": 0}).One(&cacheData)
-		if err == nil {
-			*out = cacheData.Data
-			// log.Println("u-blox: from cache")
-			return nil
-		} else {
-			// log.Println("u-blox: cache not found")
-		}
+	// ищем данные в кеш для указанного профиля и координат
+	session := u.coll.Database.Session.Copy()
+	defer session.Close()
+	coll := session.DB(u.coll.Database.Name).C(u.coll.Name)
+	search := bson.M{
+		"profile": req.Profile,
+		"point": bson.D{ // важен порядок следования элементов запроса
+			{"$nearSphere", req.Point},
+			{"$maxDistance", u.MaxDistance},
+		}}
+	filter := bson.M{"data": 1, "_id": 0}
+	var cacheData struct{ Data []byte }
+	err := coll.Find(search).Select(filter).One(&cacheData)
+	if err == nil {
+		*data = cacheData.Data
+		return nil
 	}
-
-	data, err := s.Ublox.GetRequest(in.Point, in.Profile)
+	// данные к кеш не найдены — делаем запрос данных у внешнего сервиса
+	*data, err = u.requestServers(req)
 	if err != nil {
-		// log.Println("u-blox: get request error")
 		return err
 	}
-	*out = data
-	if session != nil && coll != nil {
-		// сохраняем ответ в хранилище
-		err = coll.Insert(&struct {
-			Profile UbloxProfile // профиль
-			Point   Point        // координаты
-			Data    []byte       // содержимое ответа
-			Time    time.Time    // временная метка
-		}{
-			Profile: in.Profile,
-			Point:   in.Point,
-			Data:    data,
-			Time:    time.Now(),
-		})
-		// log.Println("u-blox: save response")
-	}
-	return nil
+	// сохраняем полученные данные в кеш
+	return coll.Insert(struct {
+		Profile UbloxProfile // профиль
+		Point   Point        // координаты
+		Data    []byte       // содержимое ответа
+		Time    time.Time    // временная метка
+	}{
+		Profile: req.Profile,
+		Point:   req.Point,
+		Data:    *data,
+		Time:    time.Now(),
+	})
 }
 
-// GetRequest осуществляет запрос к серверам и возвращает данные.
-func (u *Ublox) GetRequest(point Point, profile UbloxProfile) ([]byte, error) {
-	if u.client == nil {
-		if u.Timeout <= 0 {
-			u.Timeout = time.Minute * 2
-		}
-		u.client = &http.Client{Timeout: u.Timeout}
+// requestServers осуществляет запрос к сервису U-Blox, перебирая все доступные
+// в конфигурации сервера, и возвращает данные для инициализации браслета.
+func (u *Ublox) requestServers(req UbloxRequest) ([]byte, error) {
+	// формируем параметры для запроса данных у сервиса
+	profile := req.Profile // профиль устройства для запроса
+	var queryBuf = new(bytes.Buffer)
+	fmt.Fprintf(queryBuf, "token=%s", u.Token)
+	if profile.Format != "" {
+		fmt.Fprintf(queryBuf, ";format=%s", profile.Format)
 	}
-	query := u.getQueryParams(point, profile)
+	if len(profile.Datatype) > 0 {
+		fmt.Fprintf(queryBuf, ";datatype=%s", strings.Join(profile.Datatype, ","))
+	}
+	if len(profile.GNSS) > 0 {
+		fmt.Fprintf(queryBuf, ";gnss=%s", strings.Join(profile.GNSS, ","))
+	}
+	fmt.Fprintf(queryBuf, ";lon=%f;lat=%f", req.Point[0], req.Point[1])
+	if u.Pacc != 300000 && u.Pacc < 6000000 {
+		fmt.Fprintf(queryBuf, ";pacc=%d", u.Pacc)
+	}
+	if profile.FilterOnPos {
+		queryBuf.WriteString(";filteronpos")
+	}
+	query := queryBuf.String()
+	// перебираем все сервера сервиса по порядку
 	for i, server := range u.Servers {
 		reqURL := fmt.Sprintf("%s?%s", server, query)
 		data, err := u.getData(reqURL)
-		if err != nil {
-			if i < len(u.Servers)-1 {
-				continue
-			}
-			return nil, err
+		if err == nil {
+			return data, nil
 		}
-		return data, nil
+		if i == len(u.Servers)-1 {
+			return nil, err // для последнего сервера возвращаем ошибку
+		}
 	}
-	return nil, errors.New("all servers are not response")
-}
-
-// getQueryParams возвращает строку с параметрами запроса для сервиса U-blox.
-func (u *Ublox) getQueryParams(point Point, profile UbloxProfile) string {
-	var query = new(bytes.Buffer)
-	fmt.Fprintf(query, "token=%s", u.Token)
-	if profile.Format != "" {
-		fmt.Fprintf(query, ";format=%s", profile.Format)
-	}
-	if len(profile.Datatype) > 0 {
-		fmt.Fprintf(query, ";datatype=%s", strings.Join(profile.Datatype, ","))
-	}
-	if len(profile.GNSS) > 0 {
-		fmt.Fprintf(query, ";gnss=%s", strings.Join(profile.GNSS, ","))
-	}
-	fmt.Fprintf(query, ";lon=%f;lat=%f", point[0], point[1])
-	if u.Pacc != 300000 && u.Pacc < 6000000 {
-		fmt.Fprintf(query, ";pacc=%d", u.Pacc)
-	}
-	if profile.FilterOnPos {
-		query.WriteString(";filteronpos")
-	}
-	return query.String()
+	return nil, errors.New("UBLOX: no servers")
 }
 
 // getData осуществляет запрос к серверу и возвращает данные от него.
@@ -150,7 +131,7 @@ func (u *Ublox) getData(url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("bad response: %s", resp.Status)
+		return nil, fmt.Errorf("UBLOX: bad response %s", resp.Status)
 	}
 	return ioutil.ReadAll(resp.Body)
 }

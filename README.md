@@ -1,29 +1,30 @@
-# Сервисы проекта "Track-in-Touch"
+# Сервис Track in Touch
 
 Адрес сервера и названия файла с конфигурацией задается в виде параметров при запуске приложения. По умолчанию используется адрес `:7777` и имя файла - `config.json`.
 
 
-## Конфигурация сервиса
+## Конфигурация
 
 Для определения настроек сервиса используется файл в формате JSON:
 
 	{
-	    "MongoDB": "mongodb://localhost/trackintouch",
+	    "MongoDB": "mongodb://localhost/testtits",
 	    "Ublox": {
-	        "Token": "XXXXXXXXXXXXXXX",
-	        "Pacc": 100000,
+	        "Token": "XXXXXXXXXXXXXXXXXXXXX",
 	        "Servers": [
 	            "http://online-live1.services.u-blox.com/GetOnlineData.ashx",
 	            "http://online-live2.services.u-blox.com/GetOnlineData.ashx"
 	        ],
 	        "Timeout": 120000000000,
 	        "CacheTime": 1800000000000,
-	        "MaxDistance": 10000
+	        "MaxDistance": 10000,
+	        "Pacc": 100000
 	    },
 	    "LBS": {
 	        "Type": "Google",
-	        "Token": "XXXXXXXXXXXXXXX"
-	    }
+	        "Token": "XXXXXXXXXXXXXXXXXXXXX"
+	    },
+	    "POI": {}
 	}
 
 - `MongoDB` - содержит строку для подключения к базе данных MongoDB. Данная база используется как внутреннее хранилище данных.
@@ -37,26 +38,29 @@
 - `LBS` - сервис уточнения координат LBS
 	- `Type` - название используемого сервиса (`Google`, `Mozilla`, `Yandex`)
 	- `Token` - токен для использования сервиса
+- `POI` - не содержит дополнительных настроек и простого указания достаточно для инициализации сервиса
 
 Если данные для какого либо сервиса не определены, то он не будет инициализирован и при попытке вызова его методов будет возвращаться ошибка, что сервис не определен.
 
 
-## Подключение к сервису
+## Инициализация клиента
 
 Для взаимодействия с сервисом используется стандартный протокол GO RPC поверх TCP-соединения:
 
 	import "net/rpc"
-
 	client, err := rpc.Dial("tcp", ":7777")
-	defer client.Close()
-	err = client.Call("TrackInTouch.<Method>", in, &out)
+	...
+	client.Close()
 
 
-## Сервис U-Blox
+## Сервис U-BLOX
 
 Возвращает информацию для инициализации гео-локации браслетов. В качестве параметров передаются данные предполагаемых координат и профиля устройства, а в ответ возвращаются бинарные данные для инициализации.
 
-Название метода: `TrackInTouch.GetUblox`.
+
+### Запрос данных для инициализации
+
+Название метода: `Ublox.Get`.
 
 Входящие данные:
 
@@ -84,14 +88,17 @@
 		},
 	}
 	var out []byte
-	err = client.Call("TrackInTouch.GetUblox", in, &out)
+	err = client.Call("Ublox.Get", in, &out)
 
 
-## LBS
+## Сервис LBS
 
 Возвращает уточненные координаты по данным LBS, обращаясь к внешним сервисам. На данный момент поддерживаются сервисы Yandex, Mozilla и Google.
 
-Название метода: `TrackInTouch.GetLBS`.
+
+### Конвертация данных LBS в реальные координаты
+
+Название метода: `LBS.Get`.
 
 Входящие данные: 
 
@@ -138,7 +145,6 @@
 		Accuracy float32      // точность вычисления (погрешность)
 	}
 
-
 **Пример:**
 
 	in := LBSRequest{
@@ -156,5 +162,101 @@
 		},
 	}
 	var out LBSResponse
-	err = client.Call("TrackInTouch.GetLBS", in, &out)
+	err = client.Call("LBS.Get", in, &out)
+
+
+##  Сервис работы с определением мест (PoI)
+
+Места определяются в виде окружности, задавая координаты географической точки и радиуса в метрах.
+
+### Сохранение и изменение описания PoI
+
+Название метода: `POI.Save`.
+
+Входящие данные: 
+
+	type Place struct {
+		Group  string     // уникальный идентификатор группы
+		ID     string     // уникальный идентификатор места
+		Name   string     // отображаемое имя
+		Center [2]float32 // точка цента окружности
+		Radius float32    // радиус окружности в метрах
+	}
+
+Формат ответа: `*string` — уникальный идентификатор места
+
+Если уникальный идентификатор места не задан, то он будет присвоен автоматически. В противном случае, описание места будет сохранено с данных идентификатором.
+
+**Пример**
+
+	place := Place{
+		Group:  "test_group",
+		ID:     "",
+		Name:   "Test Place",
+		Center: [2]float32{38.67451, 55.715084},
+		Radius: 456.08,
+	}
+	var placeID string
+	err = client.Call("POI.Save", place, &placeID)
+
+
+### Удаление описания PoI
+
+Для удаления описания места необходимо указать идентификатор группы и идентификатор места.
+
+Название метода: `POI.Delete`.
+
+Входящие данные: 
+
+	type PlaceID struct {
+		Group  string     // уникальный идентификатор группы
+		ID     string     // уникальный идентификатор места
+	}
+
+Формат ответа: `*string` — уникальный идентификатор места
+
+**Пример**
+
+	placeID2 := PlaceID{
+		Group: "test_group",
+		ID:    "test_id",
+	}
+	err = client.Call("POI.Delete", placeID2, &placeID)
+
+
+### Запрос списка PoI
+
+Название метода: `POI.Get`.
+
+Входящие данные: `string` - идентификатор группы.
+
+Формат ответа: `*[]Place` - массив описания мест.
+
+**Пример**
+
+	var places = make([]Place, 0)
+	err = client.Call("POI.Get", groupID, &places)
+
+
+### Получение списка PoI для текущего местоположения
+
+Название метода: `POI.In`.
+
+Входящие данные:
+
+	type PlacePoint struct {
+		Group string // идентификатор группы
+		Point [2]float32  // координаты точки
+	}
+
+Формат ответа: `*[]string` - список идентификаторов мест, в которые входит данная точка.
+
+**Пример**
+
+	placePoint := PlacePoint{
+		Group: place.Group,
+		Point: place.Center,
+	}
+	var placeIDs = make([]string, 0)
+	err = client.Call("POI.In", placePoint, &placeIDs)
 
