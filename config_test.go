@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/rpc"
 	"os"
@@ -30,13 +29,13 @@ func TestConfig(t *testing.T) {
 		POI: &POI{},
 	}
 
-	data, err := json.MarshalIndent(service, "", "    ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println(string(data))
+	// data, err := json.MarshalIndent(service, "", "    ")
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// fmt.Println(string(data))
 
-	defer service.Close()
+	// defer service.Close()
 	go func() {
 		err := service.Run(":1234")
 		if err != nil {
