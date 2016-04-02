@@ -1,7 +1,7 @@
 # Сервис Track in Touch
 
-[![Build Status](https://travis-ci.org/mdigger/tits.svg)](https://travis-ci.org/mdigger/tits)
-
+<!-- [![Build Status](https://travis-ci.org/mdigger/tits.svg)](https://travis-ci.org/mdigger/tits)
+ -->
 Адрес сервера и названия файла с конфигурацией задается в виде параметров при запуске приложения. По умолчанию используется адрес `:7777` и имя файла - `config.json`.
 
 
