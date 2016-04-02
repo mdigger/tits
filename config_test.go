@@ -35,7 +35,7 @@ func TestConfig(t *testing.T) {
 	// }
 	// fmt.Println(string(data))
 
-	// defer service.Close()
+	defer service.Close()
 	go func() {
 		err := service.Run(":1234")
 		if err != nil {
@@ -147,6 +147,8 @@ func TestConfig(t *testing.T) {
 		fmt.Println("Save POI:", placeID)
 	}
 
+	time.Sleep(time.Second)
+
 	var places = make([]Place, 0)
 	err = client.Call("POI.Get", place.Group, &places)
 	if err != nil {
@@ -154,6 +156,8 @@ func TestConfig(t *testing.T) {
 	} else {
 		fmt.Println("Get POI:", places)
 	}
+
+	time.Sleep(time.Second)
 
 	placePoint := PlacePoint{
 		Group: place.Group,
@@ -167,6 +171,8 @@ func TestConfig(t *testing.T) {
 		fmt.Println("In POI:", placeIDs)
 	}
 
+	time.Sleep(time.Second)
+
 	placeID2 := PlaceID{
 		Group: "test_group",
 		ID:    "test_id",
@@ -177,4 +183,6 @@ func TestConfig(t *testing.T) {
 	} else {
 		fmt.Println("Delete POI:", placeID)
 	}
+
+	time.Sleep(time.Second)
 }
