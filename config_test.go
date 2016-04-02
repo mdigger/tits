@@ -26,7 +26,8 @@ func TestConfig(t *testing.T) {
 			Type:  "Google",
 			Token: os.Getenv("Google"),
 		},
-		POI: &POI{},
+		POI:     &POI{},
+		Devices: &Devices{},
 	}
 
 	// data, err := json.MarshalIndent(service, "", "    ")
@@ -147,7 +148,7 @@ func TestConfig(t *testing.T) {
 		fmt.Println("Save POI:", placeID)
 	}
 
-	time.Sleep(time.Second)
+	// time.Sleep(time.Second)
 
 	var places = make([]Place, 0)
 	err = client.Call("POI.Get", place.Group, &places)
@@ -157,7 +158,7 @@ func TestConfig(t *testing.T) {
 		fmt.Println("Get POI:", places)
 	}
 
-	time.Sleep(time.Second)
+	// time.Sleep(time.Second)
 
 	placePoint := PlacePoint{
 		Group: place.Group,
@@ -171,7 +172,7 @@ func TestConfig(t *testing.T) {
 		fmt.Println("In POI:", placeIDs)
 	}
 
-	time.Sleep(time.Second)
+	// time.Sleep(time.Second)
 
 	placeID2 := PlaceID{
 		Group: "test_group",
@@ -184,5 +185,39 @@ func TestConfig(t *testing.T) {
 		fmt.Println("Delete POI:", placeID)
 	}
 
-	time.Sleep(time.Second)
+	// time.Sleep(time.Second)
+
+	// KeyStore
+
+	var key DeviceKey
+	var data = DeviceData{
+		DeviceKey: DeviceKey{
+			Group:  "groupid",
+			Device: "deviceid",
+		},
+		Data: "тестовые данные",
+	}
+
+	err = client.Call("Devices.Save", data, &key)
+	if err != nil {
+		t.Error("Save to Devices error:", err)
+	} else {
+		fmt.Println("Save to Devices:", key)
+	}
+
+	err = client.Call("Devices.Get", key, &data)
+	if err != nil {
+		t.Error("Get Devices error:", err)
+	} else {
+		fmt.Println("Get Devices:", data)
+	}
+
+	data.Data = nil
+	err = client.Call("Devices.Save", data, &key)
+	if err != nil {
+		t.Error("Save to Devices error:", err)
+	} else {
+		fmt.Println("Save to Devices:", key)
+	}
+
 }

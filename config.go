@@ -21,10 +21,11 @@ import (
 // инициализации не происходит. Т.е. если какой-то из сервисов не предполагается
 // использовать, то достаточно его просто не описывать в конфигурации.
 type Config struct {
-	MongoDB string // строка для подключения к MongoDB
-	Ublox   *Ublox // настройки сервиса U-Blox
-	LBS     *LBS   // настройки LBS-сервиса
-	POI     *POI   // настройки сервиса POI
+	MongoDB string   // строка для подключения к MongoDB
+	Ublox   *Ublox   // настройки сервиса U-Blox
+	LBS     *LBS     // настройки LBS-сервиса
+	POI     *POI     // настройки сервиса POI
+	Devices *Devices // хранилище данных по устройствам
 
 	listener net.Listener // TCP-сервер
 }
@@ -131,6 +132,16 @@ func (c *Config) Run(addr string) (err error) {
 		}
 		// регистрируем обработчик
 		err = rpc.Register(c.POI)
+		if err != nil {
+			return err
+		}
+	}
+	// инициализируем хранилище данных по устройствам
+	if c.Devices != nil {
+		coll := session.DB(di.Database).C("keystore")
+		c.Devices.coll = coll
+		// регистрируем обработчик
+		err = rpc.Register(c.Devices)
 		if err != nil {
 			return err
 		}

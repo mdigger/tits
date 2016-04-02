@@ -262,3 +262,54 @@
 	var placeIDs = make([]string, 0)
 	err = client.Call("POI.In", placePoint, &placeIDs)
 
+
+## Информация об устройствах
+
+Данный сервис позволяет сохранять произвольную информацию с привязкой с идентификатору устройства.
+
+Типы данных:
+
+	type DeviceKey struct {
+		Group  string // идентификатор группы
+		Device string // идентификатор устройства
+	}
+
+	type DeviceData struct {
+		DeviceKey 				   // ключ
+		Data      interface{}  // данные хранения
+	}
+
+
+### Сохранение информации об устройстве
+
+Название метода: `Devices.Save`.
+
+**Пример**
+
+	var key Key
+	var data = DeviceData{
+		DeviceKey: DeviceKey{
+			Group:  "groupid",
+			Device: "deviceid",
+		},
+		Data: "тестовые данные",
+	}
+	err = client.Call("Devices.Save", data, &key)
+
+Если данные будут пустые, то запись из хранилище с этим ключем будет удалена.
+
+
+### Получение информации об устройстве
+
+Название метода: `Devices.Get`.
+
+**Пример**
+
+	var key = DeviceKey{
+			Group:  "groupid",
+			Device: "deviceid",
+		}
+	var data DeviceData
+	err = client.Call("Devices.Get", key, &data)
+
+
