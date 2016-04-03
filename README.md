@@ -26,7 +26,8 @@
 	        "Type": "Google",
 	        "Token": "XXXXXXXXXXXXXXXXXXXXX"
 	    },
-	    "POI": {}
+	    "POI": {},
+	    "Devices": {}
 	}
 
 - `MongoDB` - содержит строку для подключения к базе данных MongoDB. Данная база используется как внутреннее хранилище данных.
@@ -41,6 +42,7 @@
 	- `Type` - название используемого сервиса (`Google`, `Mozilla`, `Yandex`)
 	- `Token` - токен для использования сервиса
 - `POI` - не содержит дополнительных настроек и простого указания достаточно для инициализации сервиса
+- `Devices` - позволяет сохранять дополнительную информацию об устройстве
 
 Если данные для какого либо сервиса не определены, то он не будет инициализирован и при попытке вызова его методов будет возвращаться ошибка, что сервис не определен.
 
@@ -267,31 +269,21 @@
 
 Данный сервис позволяет сохранять произвольную информацию с привязкой с идентификатору устройства.
 
-Типы данных:
-
-	type DeviceKey struct {
-		Group  string // идентификатор группы
-		Device string // идентификатор устройства
-	}
-
-	type DeviceData struct {
-		DeviceKey 				   // ключ
-		Data      interface{}  // данные хранения
-	}
-
 
 ### Сохранение информации об устройстве
 
 Название метода: `Devices.Save`.
 
+	type DeviceData struct {
+		Device	string       // ключ
+		Data    interface{}  // данные хранения
+	}
+
 **Пример**
 
-	var key Key
+	var key string
 	var data = DeviceData{
-		DeviceKey: DeviceKey{
-			Group:  "groupid",
-			Device: "deviceid",
-		},
+		Device: "deviceid",
 		Data: "тестовые данные",
 	}
 	err = client.Call("Devices.Save", data, &key)
@@ -305,11 +297,7 @@
 
 **Пример**
 
-	var key = DeviceKey{
-			Group:  "groupid",
-			Device: "deviceid",
-		}
 	var data DeviceData
-	err = client.Call("Devices.Get", key, &data)
+	err = client.Call("Devices.Get", "deviceid", &data)
 
 

@@ -189,13 +189,10 @@ func TestConfig(t *testing.T) {
 
 	// KeyStore
 
-	var key DeviceKey
+	var key string
 	var data = DeviceData{
-		DeviceKey: DeviceKey{
-			Group:  "groupid",
-			Device: "deviceid",
-		},
-		Data: "тестовые данные",
+		Device: "deviceid",
+		Data:   "тестовые данные",
 	}
 
 	err = client.Call("Devices.Save", data, &key)
@@ -212,12 +209,12 @@ func TestConfig(t *testing.T) {
 		fmt.Println("Get Devices:", data)
 	}
 
-	data.Data = nil
-	err = client.Call("Devices.Save", data, &key)
-	if err != nil {
-		t.Error("Save to Devices error:", err)
-	} else {
-		fmt.Println("Save to Devices:", key)
-	}
+	// data.Data = nil
+	// err = client.Call("Devices.Save", data, &key)
+	// if err != nil {
+	// 	t.Error("Save to Devices error:", err)
+	// } else {
+	// 	fmt.Println("Save to Devices:", key)
+	// }
 
 }
