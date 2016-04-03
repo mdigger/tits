@@ -138,7 +138,7 @@ func (c *Config) Run(addr string) (err error) {
 	}
 	// инициализируем хранилище данных по устройствам
 	if c.Devices != nil {
-		coll := session.DB(di.Database).C("keystore")
+		coll := session.DB(di.Database).C("devices")
 		c.Devices.coll = coll
 		// регистрируем обработчик
 		err = rpc.Register(c.Devices)
