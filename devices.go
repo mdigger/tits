@@ -13,8 +13,8 @@ type Devices struct {
 
 // DeviceData описывает данные с привязкой к устройству.
 type DeviceData struct {
-	Device string      `bson:"_id"` // ключ
-	Data   interface{} // данные хранения
+	Device string `bson:"_id"` // ключ
+	Data   []byte // данные хранения
 }
 
 // Save сохраняет данные с привязкой к устройствам.

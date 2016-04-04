@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/rpc"
 	"os"
@@ -192,7 +193,76 @@ func TestConfig(t *testing.T) {
 	var key string
 	var data = DeviceData{
 		Device: "deviceid",
-		Data:   "тестовые данные",
+		Data:   []byte(`data`),
+	}
+
+	err = client.Call("Devices.Save", data, &key)
+	if err != nil {
+		t.Error("Save to Devices error:", err)
+	} else {
+		fmt.Println("Save to Devices:", key)
+	}
+
+	err = client.Call("Devices.Get", key, &data)
+	if err != nil {
+		t.Error("Get Devices error:", err)
+	} else {
+		fmt.Println("Get Devices:", data)
+	}
+
+	// data.Data = nil
+	// err = client.Call("Devices.Save", data, &key)
+	// if err != nil {
+	// 	t.Error("Save to Devices error:", err)
+	// } else {
+	// 	fmt.Println("Save to Devices:", key)
+	// }
+
+}
+
+func TestDevices(t *testing.T) {
+	service := &Config{
+		MongoDB: "mongodb://localhost/testtits",
+		Devices: &Devices{},
+	}
+
+	defer service.Close()
+	go func() {
+		err := service.Run(":1234")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	time.Sleep(time.Second)
+
+	client, err := rpc.Dial("tcp", ":1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	type Braslet struct {
+		Id       string
+		Point    [2]float32
+		Accuracy float32
+		Time     time.Time
+		Clients  []string
+		Data     map[string]interface{}
+	}
+
+	var key string
+	var bd = Braslet{
+		Id:       "testId",
+		Point:    [2]float32{32.555, 17.555},
+		Accuracy: 44.4,
+		Time:     time.Now(),
+		Clients:  []string{"clients"},
+		Data:     map[string]interface{}{"test": "data"},
+	}
+	var data = DeviceData{Device: "deviceid"}
+	data.Data, err = json.Marshal(bd)
+	if err != nil {
+		t.Error(err)
 	}
 
 	err = client.Call("Devices.Save", data, &key)
