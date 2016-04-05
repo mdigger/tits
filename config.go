@@ -26,6 +26,7 @@ type Config struct {
 	LBS     *LBS     // настройки LBS-сервиса
 	POI     *POI     // настройки сервиса POI
 	Devices *Devices // хранилище данных по устройствам
+	Store   *Store   // хранилище файлов
 
 	listener net.Listener // TCP-сервер
 }
@@ -146,6 +147,22 @@ func (c *Config) Run(addr string) (err error) {
 			return err
 		}
 	}
+	// инициализируем хранилище файлов
+	if c.Store != nil {
+		c.Store.prefix = "/store/"
+		c.Store.grid = session.DB(di.Database).GridFS("store")
+		if c.Store.CacheTime < time.Minute {
+			c.Store.CacheTime = time.Hour * 24 * 7
+		}
+		err = c.Store.grid.Files.EnsureIndex(mgo.Index{
+			Key:         []string{"uploadDate"},
+			ExpireAfter: c.Store.CacheTime,
+		})
+		if err != nil {
+			return err
+		}
+		http.Handle(c.Store.prefix, c.Store)
+	}
 	// инициализируем TCP-сервер
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
@@ -156,9 +173,11 @@ func (c *Config) Run(addr string) (err error) {
 		return err
 	}
 	c.listener = listener // сохраняем
-	rpc.Accept(listener)  // блокирующий вызов
-	session.Close()       // закрываем сессию соединения с базой данных
-	return nil
+	// rpc.Accept(listener)  // блокирующий вызов
+	rpc.HandleHTTP()                // регистрируем обработку по HTTP RPC
+	err = http.Serve(listener, nil) // запускаем обработчик HTTP
+	session.Close()                 // закрываем сессию соединения с базой данных
+	return err
 }
 
 // Close закрывает подключение к сервису и останавливает его.

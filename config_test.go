@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/rpc"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -19,7 +21,6 @@ func TestConfig(t *testing.T) {
 				"http://online-live2.services.u-blox.com/GetOnlineData.ashx",
 			},
 			Timeout:     time.Minute * 2,
-			CacheTime:   time.Minute * 30,
 			MaxDistance: 10000.0,
 			Pacc:        100000,
 		},
@@ -29,13 +30,16 @@ func TestConfig(t *testing.T) {
 		},
 		POI:     &POI{},
 		Devices: &Devices{},
+		Store: &Store{
+			CacheTime: time.Minute * 2,
+		},
 	}
 
-	// data, err := json.MarshalIndent(service, "", "    ")
+	// data2, err := json.MarshalIndent(service, "", "    ")
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
-	// fmt.Println(string(data))
+	// fmt.Println(string(data2))
 
 	defer service.Close()
 	go func() {
@@ -46,7 +50,7 @@ func TestConfig(t *testing.T) {
 	}()
 	time.Sleep(time.Second)
 
-	client, err := rpc.Dial("tcp", ":1234")
+	client, err := rpc.DialHTTP("tcp", ":1234")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,73 +222,21 @@ func TestConfig(t *testing.T) {
 	// 	fmt.Println("Save to Devices:", key)
 	// }
 
-}
-
-func TestDevices(t *testing.T) {
-	service := &Config{
-		MongoDB: "mongodb://localhost/testtits",
-		Devices: &Devices{},
-	}
-
-	defer service.Close()
-	go func() {
-		err := service.Run(":1234")
+	resp, err := http.Post("http://localhost:1234"+service.Store.prefix,
+		"text/plain", strings.NewReader("test string"))
+	if err != nil {
+		t.Error("POST Store error:", err)
+	} else {
+		fmt.Println("POST Store:", resp.Status)
+		loc, err := resp.Location()
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
-	}()
-	time.Sleep(time.Second)
-
-	client, err := rpc.Dial("tcp", ":1234")
-	if err != nil {
-		t.Fatal(err)
+		resp, err := http.Get(loc.String())
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Println("GET Store:", resp.ContentLength)
 	}
-	defer client.Close()
-
-	type Braslet struct {
-		Id       string
-		Point    [2]float32
-		Accuracy float32
-		Time     time.Time
-		Clients  []string
-		Data     map[string]interface{}
-	}
-
-	var key string
-	var bd = Braslet{
-		Id:       "testId",
-		Point:    [2]float32{32.555, 17.555},
-		Accuracy: 44.4,
-		Time:     time.Now(),
-		Clients:  []string{"clients"},
-		Data:     map[string]interface{}{"test": "data"},
-	}
-	var data = DeviceData{Device: "deviceid"}
-	data.Data, err = json.Marshal(bd)
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = client.Call("Devices.Save", data, &key)
-	if err != nil {
-		t.Error("Save to Devices error:", err)
-	} else {
-		fmt.Println("Save to Devices:", key)
-	}
-
-	err = client.Call("Devices.Get", key, &data)
-	if err != nil {
-		t.Error("Get Devices error:", err)
-	} else {
-		fmt.Println("Get Devices:", data)
-	}
-
-	// data.Data = nil
-	// err = client.Call("Devices.Save", data, &key)
-	// if err != nil {
-	// 	t.Error("Save to Devices error:", err)
-	// } else {
-	// 	fmt.Println("Save to Devices:", key)
-	// }
 
 }
