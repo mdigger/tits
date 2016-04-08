@@ -19,8 +19,8 @@ type Place struct {
 	Group  string     // уникальный идентификатор группы
 	ID     string     // уникальный идентификатор
 	Name   string     // отображаемое имя
-	Center [2]float32 // точка цента окружности
-	Radius float32    // радиус окружности в метрах
+	Center [2]float64 // точка цента окружности
+	Radius float64    // радиус окружности в метрах
 }
 
 // Save сохраняет информацию о месте в хранилище.
@@ -45,8 +45,8 @@ func (p *POI) Save(place Place, id *string) error {
 	// добавляем описание окружности в виде полигона для индексации
 	storePlace := struct {
 		Name    string
-		Center  [2]float32
-		Radius  float32
+		Center  [2]float64
+		Radius  float64
 		Polygon Polygon
 	}{
 		Name:    place.Name,

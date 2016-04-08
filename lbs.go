@@ -17,7 +17,7 @@ type LBS struct {
 // LBSResponse описывает ответ сервиса.
 type LBSResponse struct {
 	Point    Point   // координаты точки
-	Accuracy float32 // точность вычисления (погрешность)
+	Accuracy float64 // точность вычисления (погрешность)
 }
 
 // Get передает параметры с данными LBS на внешний сервер геолокации и

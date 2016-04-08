@@ -9,11 +9,11 @@ import (
 
 // Point описывает гео-координаты точки. Последовательность координат:
 // долгота (longitude), широта (latitude).
-type Point [2]float32
+type Point [2]float64
 
 // NewPoint возвращает инициализированную структуру Point. В случае задания
 // недопустимых данных для координат, генерируется panic.
-func NewPoint(lon, lat float32) Point {
+func NewPoint(lon, lat float64) Point {
 	if lon < -180 || lon > 180 {
 		panic("bad longitude")
 	}
@@ -28,7 +28,7 @@ func NewPoint(lon, lat float32) Point {
 func (p Point) GetBSON() (interface{}, error) {
 	return struct {
 		Type        string
-		Coordinates [2]float32
+		Coordinates [2]float64
 	}{
 		Type:        "Point",
 		Coordinates: p,
@@ -40,7 +40,7 @@ func (p Point) GetBSON() (interface{}, error) {
 func (p *Point) SetBSON(raw bson.Raw) error {
 	geopoint := new(struct {
 		Type        string
-		Coordinates [2]float32
+		Coordinates [2]float64
 	})
 	if err := raw.Unmarshal(geopoint); err != nil {
 		return err
@@ -55,11 +55,11 @@ func (p *Point) SetBSON(raw bson.Raw) error {
 // Polygon описывает информацию о координатах многоугольника.
 // Может так же включать вложенные многоугольники, которые являются "выемками"
 // из основного.
-type Polygon [][][2]float32
+type Polygon [][][2]float64
 
 // NewPolygon возвращает новое описание многоугольника, состоящего из заданных
 // точек (без изъятий).
-func NewPolygon(points ...[2]float32) Polygon {
+func NewPolygon(points ...[2]float64) Polygon {
 	p1, p2 := points[0], points[len(points)-1]
 	if p1[0] != p2[0] || p1[1] != p2[1] {
 		points = append(points, p1)
@@ -71,7 +71,7 @@ func NewPolygon(points ...[2]float32) Polygon {
 func (p Polygon) GetBSON() (interface{}, error) {
 	return struct {
 		Type        string
-		Coordinates [][][2]float32
+		Coordinates [][][2]float64
 	}{
 		Type:        "Polygon",
 		Coordinates: p,
@@ -82,7 +82,7 @@ func (p Polygon) GetBSON() (interface{}, error) {
 func (p *Polygon) SetBSON(raw bson.Raw) error {
 	geopolygon := new(struct {
 		Type        string
-		Coordinates [][][2]float32
+		Coordinates [][][2]float64
 	})
 	if err := raw.Unmarshal(geopolygon); err != nil {
 		return err
@@ -94,18 +94,18 @@ func (p *Polygon) SetBSON(raw bson.Raw) error {
 	return nil
 }
 
-const earthRadius = 6378137.0      // радиус Земли в метрах
-const circleToPolygonSegments = 16 // количество сегментов круга
+const earthRadius float64 = 6378137.0 // радиус Земли в метрах
+const circleToPolygonSegments = 16    // количество сегментов круга
 
 // Circle2Polygon возвращает представление круга в виде многоугольника.
 // Как не странно, GeoJSON не поддерживает окружности, поэтому приходится
 // "конвертировать" окружность в многоугольник, чтобы использовать его в
 // индексе MongoDB.
-func Circle2Polygon(center [2]float32, radius float32) Polygon {
-	rLat := float64(radius) / earthRadius * 180.0 / math.Pi
-	rLng := rLat / math.Cos(float64(center[1])*math.Pi/180.0)
-	dRad := 2.0 * math.Pi / float64(circleToPolygonSegments)
-	points := make([][2]float32, circleToPolygonSegments+1)
+func Circle2Polygon(center [2]float64, radius float64) Polygon {
+	rLat := radius / earthRadius * 180.0 / math.Pi
+	rLng := rLat / math.Cos(center[1]*math.Pi/180.0)
+	dRad := 2.0 * math.Pi / circleToPolygonSegments
+	points := make([][2]float64, circleToPolygonSegments+1)
 	for i := 0; i <= circleToPolygonSegments; i++ {
 		theta := dRad * float64(i)
 		x := math.Cos(theta)
@@ -116,7 +116,7 @@ func Circle2Polygon(center [2]float32, radius float32) Polygon {
 		if math.Abs(y) < 0.01 {
 			y = 0.0
 		}
-		points[i] = [2]float32{center[0] + float32(y*rLng), center[1] + float32(x*rLat)}
+		points[i] = [2]float64{center[0] + y*rLng, center[1] + x*rLat}
 	}
 	return NewPolygon(points...)
 }

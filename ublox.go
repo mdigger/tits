@@ -20,7 +20,7 @@ type Ublox struct {
 	Servers     []string      // список серверов
 	Timeout     time.Duration // время ожидания ответа
 	CacheTime   time.Duration // время кеширования ответа от сервисов
-	MaxDistance float32       // максимальная дистанция совпадения
+	MaxDistance float64       // максимальная дистанция совпадения
 	Pacc        uint32        // расстояние погрешности в метрах
 
 	client *http.Client    // http-клиент для запроса

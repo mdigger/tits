@@ -2,6 +2,7 @@
 
 <!-- [![Build Status](https://travis-ci.org/mdigger/tits.svg)](https://travis-ci.org/mdigger/tits)
  -->
+ 
 Адрес сервера и названия файла с конфигурацией задается в виде параметров при запуске приложения. По умолчанию используется адрес `:7777` и имя файла - `config.json`.
 
 
@@ -74,7 +75,7 @@
 Входящие данные:
 
 	type UBLOXRequest struct {
-		Point [2]float32   // ориентировочные координаты браслета
+		Point [2]float64   // ориентировочные координаты браслета
 		Profile struct {   // профиль браслета, передающийся серверу
 			Datatype    []string
 			Format      string
@@ -88,7 +89,7 @@
 **Пример:**
 
 	var in = UBLOXRequest{
-		Point: [2]float32{38.67451, 55.715084},
+		Point: [2]float64{38.67451, 55.715084},
 		Profile: struct{
 			Datatype:    []string{"pos", "eph", "aux"},
 			Format:      "aid",
@@ -150,8 +151,8 @@
 Формат ответа: 
 
 	type LBSResponse struct {
-		Point    [2]float32   // координаты точки
-		Accuracy float32      // точность вычисления (погрешность)
+		Point    [2]float64   // координаты точки
+		Accuracy float64      // точность вычисления (погрешность)
 	}
 
 **Пример:**
@@ -188,8 +189,8 @@
 		Group  string     // уникальный идентификатор группы
 		ID     string     // уникальный идентификатор места
 		Name   string     // отображаемое имя
-		Center [2]float32 // точка цента окружности
-		Radius float32    // радиус окружности в метрах
+		Center [2]float64 // точка цента окружности
+		Radius float64    // радиус окружности в метрах
 	}
 
 Формат ответа: `*string` — уникальный идентификатор места
@@ -202,7 +203,7 @@
 		Group:  "test_group",
 		ID:     "",
 		Name:   "Test Place",
-		Center: [2]float32{38.67451, 55.715084},
+		Center: [2]float64{38.67451, 55.715084},
 		Radius: 456.08,
 	}
 	var placeID string
@@ -255,7 +256,7 @@
 
 	type PlacePoint struct {
 		Group string // идентификатор группы
-		Point [2]float32  // координаты точки
+		Point [2]float64  // координаты точки
 	}
 
 Формат ответа: `*[]string` - список идентификаторов мест, в которые входит данная точка.
@@ -333,5 +334,5 @@
 В качестве данных используются данные, загруженные с сайта <http://efele.net/maps/tz/world/>. Данные сохранены статически и встроены в приложение. В случае обновления этих данных, необходимо заново запустить перегенерацию кода библиотеки.
 
 	var zone string
-	err = client.Call("LocTime.Get", [2]float32{37.589431, 55.766242}, &zone)
+	err = client.Call("LocTime.Get", [2]float64{37.589431, 55.766242}, &zone)
 	loc, err := time.LoadLocation(zone)

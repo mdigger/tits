@@ -12,7 +12,7 @@ type LocTime struct{}
 
 // Get возвращает описание временной зоны для указанных координат.
 func (l *LocTime) Get(p Point, zone *string) (err error) {
-	*zone = latlong.LookupZoneName(float64(p[1]), float64(p[0]))
+	*zone = latlong.LookupZoneName(p[1], p[0])
 	if *zone == "tables not generated yet" {
 		return errors.New("LocTime: tables data not initialized")
 	}
