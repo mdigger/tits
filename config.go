@@ -163,6 +163,11 @@ func (c *Config) Run(addr string) (err error) {
 		}
 		http.Handle(c.Store.prefix, c.Store)
 	}
+	// регистрируем сервис, возвращающий информацию о временных зонах
+	// по гео-координатам
+	if err = rpc.Register(new(LocTime)); err != nil {
+		return err
+	}
 	// инициализируем TCP-сервер
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {

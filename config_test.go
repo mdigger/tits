@@ -21,6 +21,7 @@ func TestConfig(t *testing.T) {
 				"http://online-live2.services.u-blox.com/GetOnlineData.ashx",
 			},
 			Timeout:     time.Minute * 2,
+			CacheTime:   time.Minute * 2,
 			MaxDistance: 10000.0,
 			Pacc:        100000,
 		},
@@ -239,4 +240,17 @@ func TestConfig(t *testing.T) {
 		fmt.Println("GET Store:", resp.ContentLength)
 	}
 
+	var zone string
+	err = client.Call("LocTime.Get", NewPoint(37.589431, 55.766242), &zone)
+	if err != nil {
+		t.Error("Get LocTime error:", err)
+	} else {
+		fmt.Println("Get LocTime:", data)
+	}
+	fmt.Println("LocTime zone:", zone) //time.Now().In(&loc))
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		t.Error("Bad LocTime zone:", err)
+	}
+	fmt.Println("LocTime:", time.Now().In(loc))
 }
