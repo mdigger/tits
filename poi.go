@@ -16,11 +16,13 @@ type POI struct {
 
 // Place описывает место с помощью окружности.
 type Place struct {
-	Group  string     // уникальный идентификатор группы
-	ID     string     // уникальный идентификатор
-	Name   string     // отображаемое имя
-	Center [2]float64 // точка цента окружности
-	Radius float64    // радиус окружности в метрах
+	Group    string     // уникальный идентификатор группы
+	ID       string     // уникальный идентификатор
+	Name     string     // отображаемое имя
+	Center   [2]float64 // точка цента окружности
+	Radius   float64    // радиус окружности в метрах
+	Address  string     // адрес
+	Comments string     // комментарий
 }
 
 // Save сохраняет информацию о месте в хранилище.
@@ -44,15 +46,19 @@ func (p *POI) Save(place Place, id *string) error {
 	}
 	// добавляем описание окружности в виде полигона для индексации
 	storePlace := struct {
-		Name    string
-		Center  [2]float64
-		Radius  float64
-		Polygon Polygon
+		Name     string
+		Center   [2]float64
+		Radius   float64
+		Polygon  Polygon
+		Address  string
+		Comments string
 	}{
-		Name:    place.Name,
-		Center:  place.Center,
-		Radius:  place.Radius,
-		Polygon: Circle2Polygon(place.Center, place.Radius),
+		Name:     place.Name,
+		Center:   place.Center,
+		Radius:   place.Radius,
+		Polygon:  Circle2Polygon(place.Center, place.Radius),
+		Address:  place.Address,
+		Comments: place.Comments,
 	}
 	// инициализируем копию сессии связи с базой данных
 	session := p.coll.Database.Session.Copy()

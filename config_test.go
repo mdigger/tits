@@ -139,11 +139,13 @@ func TestConfig(t *testing.T) {
 	// POI
 
 	place := Place{
-		Group:  "test_group",
-		ID:     "test_id",
-		Name:   "Test Place",
-		Center: NewPoint(38.67451, 55.715084),
-		Radius: 456.08,
+		Group:    "test_group",
+		ID:       "test_id",
+		Name:     "Test Place",
+		Center:   NewPoint(38.67451, 55.715084),
+		Radius:   456.08,
+		Address:  "test address",
+		Comments: "comments",
 	}
 	var placeID string
 	err = client.Call("POI.Save", place, &placeID)
