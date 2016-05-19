@@ -96,7 +96,28 @@ func (p *POI) Get(group string, list *[]Place) error {
 	session := p.coll.Database.Session.Copy()
 	defer session.Close()
 	coll := session.DB(p.coll.Database.Name).C(p.coll.Name)
-	return coll.Find(bson.M{"_id.group": group}).All(list)
+	places := make([]struct {
+		ID       PlaceID `bson:"_id"`
+		Name     string
+		Center   [2]float64
+		Radius   float64
+		Polygon  Polygon
+		Address  string
+		Comments string
+	}, 0)
+	err := coll.Find(bson.M{"_id.group": group}).All(&places)
+	for _, p := range places {
+		*list = append(*list, Place{
+			Group:    p.ID.Group,
+			ID:       p.ID.ID,
+			Name:     p.Name,
+			Center:   p.Center,
+			Radius:   p.Radius,
+			Address:  p.Address,
+			Comments: p.Comments,
+		})
+	}
+	return err
 }
 
 // PlacePoint описывает группу и координаты.
