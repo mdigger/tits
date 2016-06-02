@@ -7,13 +7,12 @@
 Для определения настроек сервиса используется файл в формате JSON:
 
 	{
-		URL:             "https://maxhome-msk.dyndns.org/admin/newapi/",
-		Login:           "usrsvc",
-		Password:        "9801",
-		BraceletProfile: "590890912028694065",
-		UserProfile:     "",
+	    "URL":             "https://maxhome-msk.dyndns.org/admin/newapi/",
+	    "Login":           "usrsvc",
+	    "Password":        "9801",
+	    "BraceletProfile": "590890912028694065",
+	    "UserProfile":     ""
 	}
-
 
 ## Инициализация клиента
 

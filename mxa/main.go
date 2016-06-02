@@ -12,11 +12,11 @@ func main() {
 	// читаем конфигурацию из файла
 	service, err := LoadConfig(*config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error loading config:", err)
 	}
 	// регистрируем и запускаем сервисы
 	if err := service.Run(*addr); err != nil {
-		log.Fatal(err)
+		log.Fatal("Error running service:", err)
 	}
 	service.Close()
 }
